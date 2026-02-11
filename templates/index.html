@@ -2,65 +2,59 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>UNO Robot Master - Industrial Vision</title>
+    <title>UNO Robot Master - Premium Vision</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-[#0f172a] text-white font-sans min-h-screen">
 
     <div id="start-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/95 backdrop-blur-md transition-all">
-        <div class="bg-blue-600 p-16 rounded-[3.5rem] border-b-[12px] border-blue-800 shadow-[0_35px_60px_-15px_rgba(0,0,0,0.5)] text-center transform hover:scale-105 transition-transform duration-300">
-            <h1 class="text-7xl font-black mb-10 tracking-tighter uppercase italic drop-shadow-2xl">Uno Robot</h1>
-            <button onclick="startGame()" class="bg-white text-blue-600 px-20 py-8 rounded-full font-black text-4xl shadow-2xl uppercase hover:bg-slate-100 transition-all active:scale-95">
+        <div class="bg-blue-600 p-16 rounded-[3.5rem] border-b-[12px] border-blue-800 shadow-2xl text-center transform hover:scale-105 transition-transform duration-300">
+            <h1 class="text-7xl font-black mb-10 tracking-tighter uppercase italic">Uno Robot</h1>
+            <button onclick="startGame()" class="bg-white text-blue-600 px-20 py-8 rounded-full font-black text-4xl shadow-2xl uppercase hover:bg-slate-100 transition-all">
                 Nouvelle Partie
             </button>
         </div>
     </div>
 
-    <nav class="bg-slate-800/50 backdrop-blur-sm p-4 flex justify-center border-b border-slate-700 shadow-xl sticky top-0 z-40">
-        <button onclick="location.reload()" class="text-slate-400 font-bold uppercase tracking-[0.3em] hover:text-red-400 transition-colors text-xs">Reset System Architecture</button>
-    </nav>
-
     <div class="p-8 max-w-7xl mx-auto">
         
-        <div class="max-w-3xl mx-auto mb-12">
-            <button onclick="handleAction()" id="main-btn" class="w-full bg-emerald-600 hover:bg-emerald-500 py-10 rounded-[2rem] font-black text-4xl shadow-[0_20px_50px_rgba(16,185,129,0.3)] border-b-8 border-emerald-900 uppercase transition-all active:translate-y-2 active:border-b-0">
+        <div class="max-w-3xl mx-auto mb-12 flex flex-col gap-4">
+            <button onclick="handleAction()" id="main-btn" class="w-full bg-emerald-600 hover:bg-emerald-500 py-10 rounded-[2rem] font-black text-4xl shadow-lg border-b-8 border-emerald-900 uppercase transition-all active:translate-y-2 active:border-b-0">
                 📸 <span id="btn-text">Initialisation</span>
+            </button>
+
+            <button onclick="addCard()" id="add-card-btn" class="hidden w-full bg-orange-600 hover:bg-orange-500 py-6 rounded-[1.5rem] font-black text-2xl shadow-lg border-b-6 border-orange-900 uppercase transition-all active:translate-y-1 active:border-b-0">
+                ➕ Ajouter une carte à ma pioche
             </button>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
-            
-            <div class="bg-slate-800 p-10 rounded-[3rem] border-b-8 border-blue-600 shadow-2xl transform transition-all">
-                <h2 class="text-5xl font-black mb-8 italic text-blue-500 uppercase tracking-tighter text-center drop-shadow-lg">Robot</h2>
-                
-                <div class="mb-8 bg-slate-900/80 py-8 rounded-[2rem] border border-slate-700 text-center shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]">
-                    <p class="text-[11px] text-slate-500 uppercase font-black tracking-widest mb-2">Tapis - Current State</p>
-                    <div id="discard-card" class="text-5xl font-black text-orange-500 italic uppercase tracking-tight">---</div>
+            <div class="bg-slate-800 p-10 rounded-[3rem] border-b-8 border-blue-600 shadow-2xl">
+                <h2 class="text-5xl font-black mb-8 italic text-blue-500 uppercase tracking-tighter text-center">Robot</h2>
+                <div class="mb-8 bg-slate-900/80 py-8 rounded-[2rem] border border-slate-700 text-center shadow-inner">
+                    <p class="text-[11px] text-slate-500 uppercase font-black tracking-widest mb-2">Tapis</p>
+                    <div id="discard-card" class="text-5xl font-black text-orange-500 italic uppercase">---</div>
                 </div>
-
-                <div class="bg-black/80 rounded-[2.5rem] border-2 border-blue-500/30 h-64 flex items-center justify-center px-10 text-center shadow-inner relative overflow-hidden">
-                    <div class="absolute inset-0 bg-blue-500/5 animate-pulse"></div>
-                    <p id="decision-text" class="text-4xl font-black uppercase text-blue-300 italic leading-none tracking-tighter z-10">---</p>
+                <div class="bg-black/80 rounded-[2.5rem] border-2 border-blue-500/30 h-64 flex items-center justify-center px-10 text-center shadow-inner">
+                    <p id="decision-text" class="text-4xl font-black uppercase text-blue-300 italic leading-none tracking-tighter">---</p>
                 </div>
             </div>
 
             <div class="bg-slate-800 p-10 rounded-[3rem] border-b-8 border-orange-600 shadow-2xl">
-                <h2 class="text-5xl font-black mb-8 italic text-orange-500 uppercase tracking-tighter text-center drop-shadow-lg">Adversaire</h2>
-                
-                <div class="bg-slate-900/80 p-12 rounded-[2rem] mb-10 border border-slate-700 text-center shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]">
-                    <span class="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em]">Robot Hand Inventory</span>
-                    <div id="scan-val" class="text-[10rem] leading-none font-black text-orange-500 mt-4 drop-shadow-2xl">0</div>
+                <h2 class="text-5xl font-black mb-8 italic text-orange-500 uppercase tracking-tighter text-center">Adversaire</h2>
+                <div class="bg-slate-900/80 p-12 rounded-[2rem] mb-10 border border-slate-700 text-center shadow-inner">
+                    <span class="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em]">Cartes Robot</span>
+                    <div id="scan-val" class="text-[10rem] leading-none font-black text-orange-500 mt-4">0</div>
                 </div>
-
                 <div class="p-6 bg-black/60 rounded-[1.5rem] border border-slate-700/50 flex justify-between items-center font-mono">
-                    <span class="text-[10px] text-slate-500 uppercase tracking-widest">SICK NOVA Optical Link:</span>
-                    <span id="raw-data" class="text-emerald-400 font-bold text-2xl uppercase tracking-[0.15em]">---</span>
+                    <span class="text-[10px] text-slate-500 uppercase tracking-widest">SICK NOVA :</span>
+                    <span id="raw-data" class="text-emerald-400 font-bold text-2xl uppercase">---</span>
                 </div>
             </div>
         </div>
 
-        <div class="mt-12 bg-slate-800/30 p-8 rounded-[2.5rem] border border-slate-700/50 backdrop-blur-sm">
-            <h3 class="text-center text-[10px] font-black uppercase text-slate-500 mb-6 tracking-[0.5em]">Memory Buffer hand_list[]</h3>
+        <div class="mt-12 bg-slate-800/30 p-8 rounded-[2.5rem] border border-slate-700/50 backdrop-blur-sm text-center">
+            <h3 class="text-[10px] font-black uppercase text-slate-500 mb-6 tracking-[0.5em]">Main actuelle du Robot</h3>
             <div id="hand-list" class="flex flex-wrap justify-center gap-4"></div>
         </div>
     </div>

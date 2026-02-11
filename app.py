@@ -1,5 +1,6 @@
 import socket
 import threading
+import time
 from flask import Flask, render_template, jsonify, request
 
 app = Flask(__name__)
@@ -13,15 +14,25 @@ class UnoRobot:
         self.latest_sensor_raw = "---"
         self.last_card_seen = "---" 
         self.current_turn = None
+        self.last_decision = ""
+        self.lock_until = 0
+        self.game_over = False
 
     def handle_incoming_data(self, data):
         self.latest_sensor_raw = data.strip()
+
+    def set_decision(self, text, duration=5):
+        self.last_decision = text
+        self.lock_until = time.time() + duration
 
     def get_best_color(self):
         colors = [c.split(';')[0] for c in self.hand if not c.startswith("Noir")]
         return max(set(colors), key=colors.count) if colors else "Rouge"
 
     def robot_auto_play(self):
+        if self.game_over: return "PARTIE TERMINÉE !"
+        if time.time() < self.lock_until: return self.last_decision
+
         try:
             old_color, old_type = self.last_card_seen.split(';')
             playable = [c for c in self.hand if c.startswith(old_color) or c.split(';')[1] == old_type or c.startswith("Noir")]
@@ -29,22 +40,38 @@ class UnoRobot:
             if playable:
                 chosen = playable[0]
                 self.hand.remove(chosen)
-                msg_color = ""
+                
+                if len(self.hand) == 0:
+                    self.game_over = True
+                    res = f"J'AI JOUÉ {chosen.replace(';', ' ')}. J'AI GAGNÉ ! 🏆"
+                    self.set_decision(res, 999)
+                    return res
+
+                msg_extra = ""
                 if chosen.startswith("Noir"):
                     best = self.get_best_color()
                     self.last_card_seen = f"{best};{chosen.split(';')[1]}"
-                    msg_color = f" ➔ COULEUR : {best.upper()}"
+                    msg_extra = f" ➔ COULEUR : {best.upper()} !"
+                    if "Plus4" in chosen: msg_extra += " PIOCHEZ 4 !"
                 else:
                     self.last_card_seen = chosen
+                    if "Plus2" in chosen: msg_extra = " ➔ PIOCHEZ 2 !"
 
-                if "Passer" in chosen or "Inversion" in chosen:
-                    return f"J'AI JOUÉ {chosen.replace(';', ' ')}{msg_color}. JE REJOUE !"
+                # Si le robot joue une carte qui fait sauter le tour de l'humain
+                if any(x in chosen for x in ["Passer", "Inversion", "Plus"]):
+                    res = f"J'AI JOUÉ {chosen.replace(';', ' ')}{msg_extra}. JE REJOUE !"
+                    self.current_turn = "Robot" 
+                else:
+                    self.current_turn = "Humain"
+                    res = f"J'AI JOUÉ {chosen.replace(';', ' ')}{msg_extra}. À VOUS !"
                 
-                self.current_turn = "Humain"
-                return f"J'AI JOUÉ {chosen.replace(';', ' ')}{msg_color}. À VOUS !"
+                self.set_decision(res, 4)
+                return res
             else:
                 self.current_turn = "Humain"
-                return "JE N'AI RIEN... JE PIOCHE ET PASSE."
+                res = "JE N'AI RIEN... JE PIOCHE ET JE PASSE."
+                self.set_decision(res, 5)
+                return res
         except: return "ERREUR ANALYSE TAPIS"
 
     def analyze_human_move(self):
@@ -52,9 +79,24 @@ class UnoRobot:
         try:
             n_c, n_t = self.latest_sensor_raw.split(';')
             o_c, o_t = self.last_card_seen.split(';')
+            
             if n_c == o_c or n_t == o_t or n_c == "Noir":
                 self.last_card_seen = self.latest_sensor_raw
-                if "Passer" in n_t or "Inversion" in n_t: return True, "SPÉCIAL ! VOUS REJOUEZ."
+                
+                # LOGIQUE DE SAUT DE TOUR (Duel 1vs1)
+                # Si l'humain joue Inversion, Passer, +2 ou +4 -> Le robot saute son tour
+                if any(x in n_t for x in ["Inversion", "Passer", "Plus2", "Plus4"]):
+                    self.current_turn = "Humain" # Le tour reste à l'humain
+                    
+                    msg = "TOUR SAUTÉ ! "
+                    if "Plus" in n_t:
+                        nb = "2" if "Plus2" in n_t else "4"
+                        msg += f"JE PIOCHE {nb} ET "
+                    
+                    self.set_decision(f"{msg}VOUS REJOUEZ.", 6)
+                    return True, "Coup validé. Vous rejouez !"
+
+                # Coup normal -> Tour au Robot
                 self.current_turn = "Robot"
                 return True, "COUP VALIDE"
             return False, f"NON ! JOUEZ {o_c} OU {o_t}"
@@ -91,20 +133,18 @@ def start_game():
 
 @app.route('/get_status')
 def get_status():
-    dec = ""
-    if robot.is_init_phase: dec = f"SCAN MAIN : {len(robot.hand)} / 7"
+    if robot.game_over: dec = robot.last_decision
+    elif robot.is_init_phase: dec = f"SCAN MAIN : {len(robot.hand)} / 7"
     elif robot.waiting_for_discard: dec = "SCANNEZ LE TAPIS"
+    elif time.time() < robot.lock_until: dec = robot.last_decision
     elif robot.current_turn == "Robot": dec = robot.robot_auto_play()
     else: dec = "À VOUS DE JOUER"
+    
     return jsonify({
-        "hand": robot.hand, 
-        "is_init": robot.is_init_phase, 
-        "waiting_discard": robot.waiting_for_discard, 
-        "game_started": robot.game_started, 
-        "last_card": robot.last_card_seen, 
-        "raw": robot.latest_sensor_raw, 
-        "current_turn": robot.current_turn, 
-        "decision": dec
+        "hand": robot.hand, "is_init": robot.is_init_phase, 
+        "waiting_discard": robot.waiting_for_discard, "game_started": robot.game_started, 
+        "last_card": robot.last_card_seen, "raw": robot.latest_sensor_raw, 
+        "current_turn": robot.current_turn, "decision": dec, "game_over": robot.game_over
     })
 
 @app.route('/record_next', methods=['POST'])
@@ -119,6 +159,12 @@ def record_next():
         robot.last_card_seen = robot.latest_sensor_raw
         robot.waiting_for_discard = False
         robot.current_turn = "Robot"
+    return jsonify({"success": True})
+
+@app.route('/add_to_hand', methods=['POST'])
+def add_to_hand():
+    if robot.latest_sensor_raw == "---": return jsonify({"success": False})
+    robot.hand.append(robot.latest_sensor_raw)
     return jsonify({"success": True})
 
 @app.route('/human_played', methods=['POST'])
