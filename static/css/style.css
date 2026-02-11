@@ -1,0 +1,6 @@
+body { background-color: #0f172a; }
+.card-panel { background-color: #1e293b; border-radius: 1rem; transition: all 0.3s; }
+.decision-box { background-color: #000; border: 2px solid #3b82f6; min-height: 150px; display: flex; align-items: center; justify-content: center; border-radius: 0.75rem; }
+.btn-action { transition: transform 0.1s; }
+.btn-action:active { transform: scale(0.95); }
+#hand-list span { border: 1px solid #475569; }
